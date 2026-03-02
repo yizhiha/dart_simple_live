@@ -10,11 +10,44 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Java 17 (Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
       - name: Set up Flutter 3.41.2
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.41.2"
           channel: "stable"
+          cache: true
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Create keystore & key.properties (CI)
+        run: |
+          set -e
+          # 生成临时 keystore（仅用于 CI 打包）
+          keytool -genkeypair -v \
+            -keystore "$GITHUB_WORKSPACE/simple_live_app/android/app/ci-upload.jks" \
+            -storepass "123456" \
+            -keypass "123456" \
+            -alias "upload" \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=CI,O=CI,C=CN"
+
+          # 写 key.properties（供 android/app/build.gradle.kts 读取）
+          cat > "$GITHUB_WORKSPACE/simple_live_app/android/key.properties" <<EOF
+          storePassword=123456
+          keyPassword=123456
+          keyAlias=upload
+          storeFile=app/ci-upload.jks
+          EOF
+
+          echo "=== key.properties ==="
+          cat "$GITHUB_WORKSPACE/simple_live_app/android/key.properties"
 
       - name: Pub get
         working-directory: simple_live_app
