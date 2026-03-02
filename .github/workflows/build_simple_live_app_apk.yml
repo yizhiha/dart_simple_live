@@ -1,0 +1,31 @@
+name: build-simple-live-app-apk
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter 3.38
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.0"
+          channel: "stable"
+
+      - name: Pub get
+        working-directory: simple_live_app
+        run: flutter pub get
+
+      - name: Build debug APK (installable)
+        working-directory: simple_live_app
+        run: flutter build apk --debug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: simple-live-app-debug-apk
+          path: simple_live_app/build/app/outputs/flutter-apk/app-debug.apk
