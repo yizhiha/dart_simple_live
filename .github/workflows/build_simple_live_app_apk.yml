@@ -1,10 +1,10 @@
-name: build-simple-live-app-apk
+name: build-simple-live-app-release-apk
 
 on:
   workflow_dispatch:
 
 jobs:
-  build_apk:
+  build_release_apk:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,39 +26,28 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
-      - name: Create keystore & key.properties (CI)
+      - name: Restore keystore & key.properties (Release)
         run: |
           set -e
-          # 生成临时 keystore（仅用于 CI 打包）
-          keytool -genkeypair -v \
-            -keystore "$GITHUB_WORKSPACE/simple_live_app/android/app/ci-upload.jks" \
-            -storepass "123456" \
-            -keypass "123456" \
-            -alias "upload" \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=CI,O=CI,C=CN"
+          echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > "$GITHUB_WORKSPACE/simple_live_app/android/app/release.jks"
 
-          # 写 key.properties（供 android/app/build.gradle.kts 读取）
           cat > "$GITHUB_WORKSPACE/simple_live_app/android/key.properties" <<EOF
-          storePassword=123456
-          keyPassword=123456
-          keyAlias=upload
-          storeFile=app/ci-upload.jks
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=app/release.jks
           EOF
-
-          echo "=== key.properties ==="
-          cat "$GITHUB_WORKSPACE/simple_live_app/android/key.properties"
 
       - name: Pub get
         working-directory: simple_live_app
         run: flutter pub get
 
-      - name: Build debug APK (installable)
+      - name: Build release APK
         working-directory: simple_live_app
-        run: flutter build apk --debug
+        run: flutter build apk --release
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: simple-live-app-debug-apk
-          path: simple_live_app/build/app/outputs/flutter-apk/app-debug.apk
+          name: simple-live-app-release-apk
+          path: simple_live_app/build/app/outputs/flutter-apk/app-release.apk
