@@ -6,6 +6,7 @@ on:
 jobs:
   build_release_apk:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,14 +30,19 @@ jobs:
       - name: Restore keystore & key.properties (Release)
         run: |
           set -e
+          # 写入 keystore 到 android/app/release.jks
           echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > "$GITHUB_WORKSPACE/simple_live_app/android/app/release.jks"
 
+          # 生成 key.properties（注意：storeFile 要与上面的路径匹配，避免 android/app/app/ 这种拼接）
           cat > "$GITHUB_WORKSPACE/simple_live_app/android/key.properties" <<EOF
           storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
           keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          storeFile=app/release.jks
+          storeFile=release.jks
           EOF
+
+          echo "=== key.properties ==="
+          cat "$GITHUB_WORKSPACE/simple_live_app/android/key.properties"
 
       - name: Pub get
         working-directory: simple_live_app
